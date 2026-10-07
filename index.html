@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<base target="_top">
+<meta charset="utf-8">
+<style>
+  :root{
+    --bg:#f5f6f8; --card:#fff; --ink:#1d2330; --sub:#6b7280; --line:#e5e7eb;
+    --pri:#2f5fd0; --pri-soft:#e8efff; --ok:#16794c; --ok-soft:#e6f4ec; --warn:#b42318; --warn-soft:#fdecea;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 "Pretendard","Apple SD Gothic Neo","Malgun Gothic",sans-serif}
+  .wrap{max-width:760px;margin:0 auto;padding:16px}
+  header h1{font-size:22px;margin:4px 0 2px}
+  header .meta{color:var(--sub);font-size:13px}
+  .notice{background:var(--pri-soft);border-radius:10px;padding:10px 12px;margin:12px 0;font-size:14px}
+  .closed{background:var(--warn-soft);color:var(--warn);font-weight:600}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px;margin:12px 0}
+  .who{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  .who label{font-weight:700}
+  select,input[type=text],input[type=password],input[type=number]{font:inherit;padding:10px 12px;border:1px solid var(--line);border-radius:8px;background:#fff;min-width:0}
+  .who input{flex:1;min-width:160px}
+  .tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);margin-top:8px}
+  .tabs button{flex:1;border:0;background:none;padding:12px 4px;font:inherit;font-weight:600;color:var(--sub);border-bottom:3px solid transparent;cursor:pointer}
+  .tabs button.on{color:var(--pri);border-color:var(--pri)}
+  .pane{display:none}.pane.on{display:block}
+  .search{display:flex;gap:8px}
+  .search input{flex:1}
+  .btn{font:inherit;font-weight:600;border:0;border-radius:8px;padding:10px 16px;cursor:pointer;background:var(--pri);color:#fff;white-space:nowrap}
+  .btn.ghost{background:#fff;color:var(--ink);border:1px solid var(--line)}
+  .btn.danger{background:#fff;color:var(--warn);border:1px solid #f3c1bc;padding:6px 10px;font-size:13px}
+  .btn:disabled{opacity:.5;cursor:default}
+  .hint{color:var(--sub);font-size:13px;margin-top:6px}
+  .list{margin-top:12px;display:flex;flex-direction:column;gap:8px}
+  .item{display:flex;gap:12px;padding:10px;border:1px solid var(--line);border-radius:10px;background:#fff;cursor:pointer;text-align:left;font:inherit;color:inherit;width:100%}
+  .item:hover{border-color:var(--pri)}
+  .item img,.detail img{width:64px;height:92px;object-fit:cover;border-radius:4px;background:#eee;flex:none}
+  .item .t{font-weight:700}
+  .item .s{color:var(--sub);font-size:13px}
+  .price{font-weight:700;color:var(--pri)}
+  .price s{color:var(--sub);font-weight:400;font-size:13px;margin-left:6px}
+  .detail{display:flex;gap:14px}
+  .detail img{width:96px;height:138px}
+  .detail .t{font-size:17px;font-weight:700}
+  .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:12px}
+  .qtylabel{font-weight:700}
+  .qty{display:flex;align-items:center;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+  .qty button{border:0;background:#f3f4f6;width:36px;height:40px;font-size:18px;cursor:pointer}
+  .qty input{width:48px;border:0;text-align:center;border-radius:0;padding:8px 0}
+  .badge{display:inline-block;font-size:12px;font-weight:700;padding:2px 8px;border-radius:999px;margin-top:4px}
+  .badge.have{background:#fff4e5;color:#b54708}
+  .badge.none{background:#f3f4f6;color:var(--sub)}
+  .lib{margin-top:12px;border-radius:10px;padding:10px 12px;background:#f9fafb;font-size:14px}
+  .lib.have{background:#fff4e5}
+  .lib .h{font-weight:700;display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap}
+  .lib .h a{font-weight:400;font-size:13px}
+  .lib .cp{display:flex;justify-content:space-between;gap:8px;padding:6px 0;border-top:1px dashed #e5d3b3;font-size:13px}
+  .lib .cp:first-of-type{border-top:0}
+  .st{font-weight:700;white-space:nowrap}.st.ok{color:var(--ok)}.st.out{color:var(--warn)}
+  .linkbtn{border:0;background:none;color:var(--pri);font:inherit;font-size:13px;padding:0;cursor:pointer;text-decoration:underline}
+  .form{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
+  .form label{display:flex;flex-direction:column;gap:4px;font-size:13px;font-weight:600}
+  .form label.full{grid-column:1/-1}
+  .form input{width:100%;font-weight:400}
+  @media (max-width:480px){.form{grid-template-columns:1fr}}
+  footer{color:var(--sub);font-size:12px;text-align:center;padding:16px 0 32px}
+  footer a{color:inherit}
+  .update{background:#fff4e5;color:#b54708;border-radius:10px;padding:10px 12px;margin-top:12px;font-size:14px}
+  .update a{color:inherit;font-weight:700}
+  .mine .o{display:flex;justify-content:space-between;gap:10px;padding:10px 0;border-bottom:1px solid var(--line)}
+  .mine .o:last-child{border:0}
+  table{width:100%;border-collapse:collapse;font-size:14px}
+  th,td{padding:8px 6px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+  th{background:#f9fafb;font-weight:600}
+  td.n,th.n{text-align:right;white-space:nowrap}
+  .tbl{overflow-x:auto}
+  .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px}
+  .stat{background:#f9fafb;border-radius:10px;padding:10px}
+  .stat .k{font-size:12px;color:var(--sub)}.stat .v{font-size:20px;font-weight:700}
+  .empty{color:var(--sub);text-align:center;padding:24px 0}
+  .spin{display:inline-block;width:16px;height:16px;border:2px solid #c7d2fe;border-top-color:var(--pri);border-radius:50%;animation:r .8s linear infinite;vertical-align:-3px;margin-right:6px}
+  @keyframes r{to{transform:rotate(360deg)}}
+  #toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);max-width:92%;padding:12px 16px;border-radius:10px;color:#fff;background:#111827;font-weight:600;opacity:0;pointer-events:none;transition:opacity .2s}
+  #toast.show{opacity:1}#toast.err{background:var(--warn)}#toast.ok{background:var(--ok)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1 id="title">도서신청</h1>
+    <div class="meta" id="due"></div>
+  </header>
+  <div class="notice" id="notice">불러오는 중…</div>
+
+  <div class="card">
+    <div class="who">
+      <label for="name">신청자</label>
+      <input id="name" type="text" placeholder="이름을 입력하세요 (예: 홍길동)" autocomplete="name" maxlength="20">
+    </div>
+  </div>
+
+  <div class="tabs">
+    <button class="on" data-tab="order">📖 책 신청</button>
+    <button data-tab="mine">🧾 내 신청내역</button>
+    <button data-tab="admin">📊 현황</button>
+  </div>
+
+  <!-- 신청 -->
+  <section class="pane on" id="pane-order">
+    <div class="card">
+      <form class="search" id="searchForm">
+        <input id="q" type="text" placeholder="책 제목, 저자, ISBN 또는 교보문고 링크" autocomplete="off">
+        <button class="btn" id="searchBtn">검색</button>
+      </form>
+      <div class="hint">교보문고에서 검색합니다. 교보문고 상품 링크를 그대로 붙여넣어도 돼요.
+        <button type="button" class="linkbtn" id="manualOpen">찾는 책이 안 나오면 직접 입력</button></div>
+      <div id="picked"></div>
+      <div class="list" id="results"></div>
+    </div>
+  </section>
+
+  <!-- 내 내역 -->
+  <section class="pane" id="pane-mine">
+    <div class="card mine" id="mine"><div class="empty">위에 이름을 먼저 입력하세요.</div></div>
+  </section>
+
+  <!-- 관리자 -->
+  <section class="pane" id="pane-admin">
+    <div class="card">
+      <form class="search" id="adminForm">
+        <input id="pw" type="password" placeholder="관리자 비밀번호">
+        <button class="btn">보기</button>
+      </form>
+      <div id="admin"></div>
+    </div>
+  </section>
+</div>
+<footer id="footer">도서신청 웹앱 · <a href="https://blog.naver.com/qkfkekdl" target="_blank" rel="noopener">구두방장선생</a></footer>
+<div id="toast"></div>
+
+<script>
+var S = { init:null, name:'', my:null, results:[], pw:'' };
+
+function $(id){ return document.getElementById(id); }
+function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];}); }
+function won(n){ return (Number(n)||0).toLocaleString('ko-KR') + '원'; }
+function toast(msg, type){ var t=$('toast'); t.textContent=msg; t.className='show '+(type||''); clearTimeout(t._h); t._h=setTimeout(function(){t.className='';}, 3200); }
+function call(fn){
+  var args = [].slice.call(arguments,1);
+  return new Promise(function(res, rej){
+    var r = google.script.run.withSuccessHandler(res).withFailureHandler(function(e){ rej(e); });
+    r[fn].apply(r, args);
+  });
+}
+function errMsg(e){ return (e && e.message ? e.message : String(e)).replace(/^Error:\s*/,''); }
+function cover(src){ return src ? '<img src="'+esc(src)+'" referrerpolicy="no-referrer" loading="lazy" onerror="this.style.visibility=\'hidden\'">' : '<img alt="">'; }
+
+/* ---------- 탭 ---------- */
+document.querySelectorAll('.tabs button').forEach(function(b){
+  b.onclick = function(){
+    document.querySelectorAll('.tabs button').forEach(function(x){ x.classList.toggle('on', x===b); });
+    document.querySelectorAll('.pane').forEach(function(p){ p.classList.toggle('on', p.id==='pane-'+b.dataset.tab); });
+    if (b.dataset.tab==='mine') loadMine();
+  };
+});
+
+/* ---------- 초기화 ---------- */
+call('getInitData').then(function(d){
+  S.init = d;
+  $('title').textContent = d.title || '도서신청';
+  document.title = d.title || '도서신청';
+  $('due').textContent = d.due ? '마감: ' + d.due : '';
+  if (d.version) $('footer').innerHTML = '도서신청 웹앱 v' + esc(d.version) + ' · <a href="' + esc(d.authorUrl) + '" target="_blank" rel="noopener">' + esc(d.author) + '</a>';
+  if (!d.open){ $('notice').textContent = d.closedMsg; $('notice').classList.add('closed'); }
+  else $('notice').textContent = d.notice || '';
+  var saved=''; try{ saved = localStorage.getItem('bookName')||''; }catch(e){}
+  if (saved){ $('name').value = saved; setName(saved); }
+}).catch(function(e){ $('notice').textContent = '불러오기 실패: ' + errMsg(e); });
+
+function cleanName(n){ return String(n||'').replace(/\s+/g,''); }
+$('name').onchange = function(){ setName(this.value); };
+$('name').onkeydown = function(e){ if (e.key==='Enter'){ e.preventDefault(); this.blur(); } };
+
+function setName(n){
+  n = cleanName(n);
+  if (n === S.name) return;
+  S.name = n; S.my = null;
+  try{ localStorage.setItem('bookName', n); }catch(e){}
+  if (n) loadMine(); else renderMine();
+}
+
+/* ---------- 검색 ---------- */
+$('searchForm').onsubmit = function(e){
+  e.preventDefault();
+  var q = $('q').value.trim(); if (!q) return;
+  $('picked').innerHTML = '';
+  $('results').innerHTML = '<div class="empty"><span class="spin"></span>교보문고에서 찾는 중…</div>';
+  $('searchBtn').disabled = true;
+  call('searchBooks', q).then(function(r){
+    S.results = r.items || [];
+    if (r.direct && S.results[0]) { $('results').innerHTML=''; showPicked(S.results[0]); return; }
+    renderResults();
+  }).catch(function(e){
+    $('results').innerHTML = '<div class="empty">검색 실패: ' + esc(errMsg(e)) +
+      '<br><button type="button" class="linkbtn" onclick="showManual({title:$(\'q\').value})">직접 입력해서 신청하기</button></div>';
+  }).then(function(){ $('searchBtn').disabled = false; });
+};
+
+function renderResults(){
+  if (!S.results.length){ $('results').innerHTML = '<div class="empty">검색 결과가 없어요. 제목을 짧게 바꿔보세요.' +
+    '<br><button type="button" class="linkbtn" onclick="showManual({title:$(\'q\').value})">직접 입력해서 신청하기</button></div>'; return; }
+  $('results').innerHTML = S.results.map(function(b,i){
+    return '<button type="button" class="item" data-i="'+i+'">' + cover(b.cover) +
+      '<div><div class="t">'+esc(b.title)+'</div>' +
+      '<div class="s">'+esc(b.author)+'</div>' +
+      '<div class="s">'+esc(b.publisher)+(b.pubDate?' · '+esc(b.pubDate):'')+'</div>' +
+      (b.salePrice ? '<div class="price">'+won(b.salePrice)+'</div>' : '') +
+      '<div class="libbadge" data-isbn="'+esc(b.isbn)+'"></div>' +
+      '</div></button>';
+  }).join('');
+  $('results').querySelectorAll('.item').forEach(function(el){
+    el.onclick = function(){ pick(S.results[+el.dataset.i]); };
+  });
+  // 우리 학교 도서관 소장 여부 (목록용, ISBN 기준)
+  var isbns = S.results.map(function(b){ return b.isbn; }).filter(Boolean);
+  if (isbns.length) call('checkLibraryBatch', isbns).then(function(m){
+    $('results').querySelectorAll('.libbadge').forEach(function(el){
+      var n = m[el.dataset.isbn];
+      if (n > 0) el.innerHTML = '<span class="badge have">🏫 학교도서관 소장 '+n+'권</span>';
+    });
+  }).catch(function(){});
+}
+
+/* ---------- 학교도서관 ---------- */
+function renderLib(r, b){
+  var el = $('libBox'); if (!el) return;
+  if (!r || r.match==='off'){ el.style.display='none'; return; }
+  var link = '<a href="'+esc(r.url)+'" target="_blank">도서관에서 보기</a>';
+  if (!r.holdings.length){
+    el.className='lib';
+    el.innerHTML = '<div class="h"><span>🏫 우리 학교 도서관에 없는 책이에요</span>'+link+'</div>';
+    return;
+  }
+  var ok = r.holdings.filter(function(h){ return h.status==='대출가능'; }).length;
+  var head = r.match==='isbn'
+    ? '🏫 우리 학교 도서관에 '+r.holdings.length+'권 있어요 (대출가능 '+ok+'권)'
+    : '🏫 제목이 같은 책이 도서관에 '+r.holdings.length+'권 있어요 (판·출판사가 다를 수 있음)';
+  el.className='lib have';
+  el.innerHTML = '<div class="h"><span>'+head+'</span>'+link+'</div>' +
+    r.holdings.map(function(h){
+      var out = h.status!=='대출가능';
+      return '<div class="cp"><span>'+esc(h.callNo || h.regNo)+' · '+esc(h.location)+
+        (r.match==='title' ? '<br><span style="color:var(--sub)">'+esc(h.title)+' · '+esc(h.publisher)+' '+esc(h.pubYear)+'</span>' : '')+
+        '</span><span class="st '+(out?'out':'ok')+'">'+esc(h.status)+(h.returnDate?' · '+esc(h.returnDate.slice(5))+' 반납예정':'')+'</span></div>';
+    }).join('');
+  if (r.match==='isbn') b._inLibrary = r.holdings.length;
+}
+
+function pick(b){
+  $('picked').innerHTML = '<div class="card"><span class="spin"></span>가격·저자 정보를 확인하는 중…</div>';
+  window.scrollTo({top: $('picked').offsetTop - 10, behavior:'smooth'});
+  call('getBook', b.pid).then(showPicked).catch(function(e){
+    $('picked').innerHTML = '<div class="card"><div style="color:var(--warn)">'+esc(errMsg(e))+'</div>' +
+      '<div class="row"><button type="button" class="btn ghost" id="toManual">직접 입력해서 신청하기</button></div></div>';
+    $('toManual').onclick = function(){ showManual({ title:b.title, author:b.author, publisher:b.publisher, price:b.salePrice||'', isbn:b.isbn, url:b.url }); };
+  });
+}
+
+function showPicked(b){
+  var already = S.my && S.my.orders.some(function(o){ return o.pid===b.pid; });
+  $('picked').innerHTML =
+    '<div class="card" style="border-color:var(--pri)"><div class="detail">' + cover(b.cover) +
+    '<div><div class="t">'+esc(b.title)+'</div>' +
+    '<div class="s">'+esc(b.author)+'</div>' +
+    '<div class="s">'+esc(b.publisher)+(b.pubDate?' · '+esc(b.pubDate):'')+'</div>' +
+    '<div class="s">ISBN '+esc(b.isbn)+' · <a href="'+esc(b.url)+'" target="_blank">교보문고에서 보기</a></div>' +
+    '<div class="price" style="margin-top:4px">'+won(b.salePrice) + (b.originalPrice && b.originalPrice!==b.salePrice ? '<s>정가 '+won(b.originalPrice)+'</s>' : '') + '</div>' +
+    '</div></div>' +
+    '<div class="lib" id="libBox"><span class="spin"></span>우리 학교 도서관 소장 여부 확인 중…</div>' +
+    (already ? '<div class="notice closed" style="margin-bottom:0">이미 신청한 책입니다.</div>' :
+    '<div class="row"><label class="qtylabel" for="qty">신청 권수</label><div class="qty"><button type="button" id="qm">−</button><input id="qty" type="number" min="1" max="100" value="1" inputmode="numeric"><button type="button" id="qp">+</button></div><span>권</span></div>' +
+    '<div class="row">' +
+    '<button class="btn" id="submitBtn">이 책 신청하기</button>' +
+    '<button class="btn ghost" id="cancelPick">다른 책 고르기</button></div>') +
+    '</div>';
+  call('checkLibrary', b.isbn, b.title).then(function(r){ renderLib(r, b); })
+    .catch(function(){ var el=$('libBox'); if (el) el.innerHTML='도서관 정보를 불러오지 못했어요.'; });
+  if (already) return;
+  $('qm').onclick=function(){ $('qty').value=Math.max(1,(+$('qty').value||1)-1); };
+  $('qp').onclick=function(){ $('qty').value=(+$('qty').value||1)+1; };
+  $('cancelPick').onclick=function(){ $('picked').innerHTML=''; };
+  $('submitBtn').onclick=function(){ submit(b); };
+}
+
+function submit(b){
+  setName($('name').value);
+  if (!S.name){ toast('먼저 신청자 이름을 입력하세요.', 'err'); window.scrollTo({top:0,behavior:'smooth'}); $('name').focus(); return; }
+  if (S.init && !S.init.open){ toast(S.init.closedMsg, 'err'); return; }
+  var qty = Math.floor(+$('qty').value);
+  if (!(qty >= 1)){ toast('신청 권수를 1 이상으로 입력하세요.', 'err'); $('qty').focus(); return; }
+  var btn = $('submitBtn');
+  if (b._inLibrary && btn.dataset.confirm!=='1'){
+    btn.dataset.confirm='1'; btn.textContent='도서관에 있어요 · 그래도 신청';
+    toast('우리 학교 도서관에 이미 '+b._inLibrary+'권 있어요. 한 번 더 누르면 신청됩니다.');
+    return;
+  } btn.disabled = true; btn.innerHTML = '<span class="spin"></span>신청 중…';
+  call('submitOrder', S.name, b.pid, qty).then(function(my){
+    S.my = my; renderMine();
+    $('picked').innerHTML = '<div class="card" style="background:var(--ok-soft);border-color:#b7e1c7;color:var(--ok);font-weight:700">✅ 신청 완료: '+esc(b.title)+' '+qty+'권</div>';
+    toast('신청했습니다!', 'ok');
+  }).catch(function(e){
+    toast(errMsg(e), 'err'); btn.disabled=false; btn.textContent='이 책 신청하기';
+  });
+}
+
+/* ---------- 직접 입력 (교보 정보를 못 읽을 때) ---------- */
+$('manualOpen').onclick = function(){ showManual({ title: $('q').value }); };
+function showManual(p){
+  p = p || {};
+  if (/^https?:|^S\d{12}$|^\d{10,13}$/.test(String(p.title||'').trim())) p.title = '';
+  function f(id, label, val, extra, full){
+    return '<label'+(full?' class="full"':'')+'>'+label+'<input id="'+id+'" type="text" value="'+esc(val==null?'':val)+'" '+(extra||'')+'></label>';
+  }
+  $('results').innerHTML = '';
+  $('picked').innerHTML =
+    '<div class="card" style="border-color:var(--pri)"><div style="font-weight:700">✏️ 직접 입력해서 신청</div>' +
+    '<div class="hint" style="margin-top:2px">교보문고에서 정보를 못 가져올 때 쓰세요. 정가는 책 뒤표지나 서점 화면의 정가를 적어 주세요.</div>' +
+    '<div class="form">' +
+      f('mTitle','도서명 *',p.title,'maxlength="200"',true) +
+      f('mAuthor','지은이',p.author,'maxlength="100"') +
+      f('mPub','출판사',p.publisher,'maxlength="100"') +
+      f('mPrice','정가(원) *',p.price,'inputmode="numeric" maxlength="9"') +
+      f('mIsbn','ISBN (있으면)',p.isbn,'inputmode="numeric" maxlength="17"') +
+      f('mUrl','책 링크 (있으면)',p.url,'maxlength="300"',true) +
+    '</div>' +
+    '<div class="lib" id="libBox" style="display:none"></div>' +
+    '<div class="row"><label class="qtylabel" for="qty">신청 권수</label><div class="qty"><button type="button" id="qm">−</button><input id="qty" type="number" min="1" max="100" value="1" inputmode="numeric"><button type="button" id="qp">+</button></div><span>권</span></div>' +
+    '<div class="row"><button class="btn" id="mSubmit">이 책 신청하기</button><button class="btn ghost" id="cancelPick">닫기</button></div></div>';
+  $('qm').onclick=function(){ $('qty').value=Math.max(1,(+$('qty').value||1)-1); };
+  $('qp').onclick=function(){ $('qty').value=(+$('qty').value||1)+1; };
+  $('cancelPick').onclick=function(){ $('picked').innerHTML=''; };
+  // 도서명·ISBN 입력이 끝나면 학교도서관 확인
+  function lib(){
+    var t=$('mTitle').value.trim(), i=$('mIsbn').value.replace(/[^\dXx]/g,'');
+    if (!t && !i) return;
+    var box=$('libBox'); box.style.display=''; box.className='lib'; box.innerHTML='<span class="spin"></span>우리 학교 도서관 소장 여부 확인 중…';
+    S.manual = { _inLibrary:0 };
+    call('checkLibrary', i, t).then(function(r){ renderLib(r, S.manual); }).catch(function(){ box.innerHTML='도서관 정보를 불러오지 못했어요.'; });
+  }
+  $('mTitle').onchange = lib; $('mIsbn').onchange = lib;
+  if (p.title || p.isbn) lib();
+  $('mSubmit').onclick = submitManual;
+  $('mTitle').focus();
+  window.scrollTo({top: $('picked').offsetTop - 10, behavior:'smooth'});
+}
+function submitManual(){
+  setName($('name').value);
+  if (!S.name){ toast('먼저 신청자 이름을 입력하세요.', 'err'); window.scrollTo({top:0,behavior:'smooth'}); $('name').focus(); return; }
+  if (S.init && !S.init.open){ toast(S.init.closedMsg, 'err'); return; }
+  var info = { title:$('mTitle').value.trim(), author:$('mAuthor').value.trim(), publisher:$('mPub').value.trim(),
+               price:$('mPrice').value.replace(/[^\d]/g,''), isbn:$('mIsbn').value.trim(), url:$('mUrl').value.trim() };
+  if (!info.title){ toast('도서명을 입력하세요.', 'err'); $('mTitle').focus(); return; }
+  if (!(+info.price > 0)){ toast('정가를 숫자로 입력하세요.', 'err'); $('mPrice').focus(); return; }
+  var qty = Math.floor(+$('qty').value);
+  if (!(qty >= 1)){ toast('신청 권수를 1 이상으로 입력하세요.', 'err'); $('qty').focus(); return; }
+  var btn = $('mSubmit');
+  if (S.manual && S.manual._inLibrary && btn.dataset.confirm!=='1'){
+    btn.dataset.confirm='1'; btn.textContent='도서관에 있어요 · 그래도 신청';
+    toast('우리 학교 도서관에 이미 '+S.manual._inLibrary+'권 있어요. 한 번 더 누르면 신청됩니다.');
+    return;
+  }
+  btn.disabled = true; btn.innerHTML = '<span class="spin"></span>신청 중…';
+  call('submitManualOrder', S.name, info, qty).then(function(my){
+    S.my = my; renderMine();
+    $('picked').innerHTML = '<div class="card" style="background:var(--ok-soft);border-color:#b7e1c7;color:var(--ok);font-weight:700">✅ 신청 완료: '+esc(info.title)+' '+qty+'권</div>';
+    toast('신청했습니다!', 'ok');
+  }).catch(function(e){ toast(errMsg(e), 'err'); btn.disabled=false; btn.textContent='이 책 신청하기'; });
+}
+
+/* ---------- 내 신청내역 ---------- */
+function loadMine(){
+  if (!S.name){ renderMine(); return; }
+  var n = S.name;
+  call('getMyOrders', n).then(function(my){ if (S.name!==n) return; S.my = my; renderMine(); })
+    .catch(function(e){ $('mine').innerHTML = '<div class="empty">'+esc(errMsg(e))+'</div>'; });
+}
+function renderMine(){
+  var el = $('mine');
+  if (!S.name){ el.innerHTML = '<div class="empty">위에 이름을 먼저 입력하세요.</div>'; return; }
+  if (!S.my){ el.innerHTML = '<div class="empty"><span class="spin"></span>불러오는 중…</div>'; return; }
+  if (!S.my.orders.length){ el.innerHTML = '<div class="empty">아직 신청한 책이 없어요.</div>'; return; }
+  el.innerHTML = '<div style="font-weight:700;margin-bottom:4px">'+esc(S.name)+' 님의 신청내역 · 총 '+S.my.total+'권</div>' +
+    S.my.orders.map(function(o){
+      return '<div class="o"><div><div style="font-weight:600">'+esc(o.title)+'</div>' +
+        '<div class="hint" style="margin:0">'+esc(o.publisher)+' · '+o.qty+'권 · '+won(o.salePrice)+' · '+esc(o.time)+'</div></div>' +
+        '<div><button class="btn danger" data-id="'+esc(o.id)+'">취소</button></div></div>';
+    }).join('');
+  el.querySelectorAll('[data-id]').forEach(function(b){
+    b.onclick = function(){
+      if (b.dataset.confirm!=='1'){ b.dataset.confirm='1'; b.textContent='정말 취소?'; return; }
+      b.disabled = true;
+      call('cancelOrder', S.name, b.dataset.id).then(function(my){ S.my=my; renderMine(); toast('취소했습니다.'); })
+        .catch(function(e){ toast(errMsg(e),'err'); b.disabled=false; });
+    };
+  });
+}
+
+/* ---------- 관리자 ---------- */
+$('adminForm').onsubmit = function(e){
+  e.preventDefault(); S.pw = $('pw').value; loadAdmin();
+};
+function loadAdmin(){
+  $('admin').innerHTML = '<div class="empty"><span class="spin"></span>집계 중…</div>';
+  call('getAdminSummary', S.pw).then(renderAdmin).catch(function(e){ $('admin').innerHTML = '<div class="empty" style="color:var(--warn)">'+esc(errMsg(e))+'</div>'; });
+}
+function renderAdmin(s){
+  var budget = s.budget ? '<div class="stat"><div class="k">예산 대비</div><div class="v">'+Math.round(s.totalAmount/s.budget*100)+'%</div><div class="k">잔액 '+won(s.budget - s.totalAmount)+'</div></div>' : '';
+  var up = s.update || {};
+  $('admin').innerHTML =
+    (up.newer ? '<div class="update">🆕 새 버전 v'+esc(up.latest)+'이 나왔어요 (지금 v'+esc(s.version)+'). '+esc(up.notes||'')+
+      (up.url ? ' <a href="'+esc(up.url)+'" target="_blank" rel="noopener">업데이트 방법 보기</a>' : '')+'</div>' : '') +
+    '<div class="stats" style="margin-top:12px">' +
+      '<div class="stat"><div class="k">신청자</div><div class="v">'+s.people+'명</div></div>' +
+      '<div class="stat"><div class="k">도서</div><div class="v">'+s.books.length+'종 '+s.totalQty+'권</div></div>' +
+      '<div class="stat"><div class="k">총액 ('+esc(s.basis)+')</div><div class="v">'+won(s.totalAmount)+'</div></div>' + budget +
+    '</div>' +
+    '<div class="row"><button class="btn" id="mkSheet">주문서 시트 만들기</button><button class="btn ghost" id="reload">새로고침</button></div>' +
+    '<div class="tbl" style="margin-top:12px"><table><tr><th>도서명</th><th>출판사</th><th class="n">'+esc(s.basis)+'</th><th class="n">수량</th><th class="n">금액</th></tr>' +
+    (s.books.length ? s.books.map(function(b){
+      return '<tr><td>'+esc(b.title)+(b.lib && b.lib!=='미소장' ? ' <span class="badge have">'+esc(b.lib)+'</span>' : '')+'<div class="hint" style="margin:0">'+esc(b.people.join(', '))+'</div></td><td>'+esc(b.publisher)+'</td><td class="n">'+won(b.unit)+'</td><td class="n">'+b.qty+'</td><td class="n">'+won(b.amount)+'</td></tr>';
+    }).join('') : '<tr><td colspan="5" class="empty">신청 내역이 없습니다.</td></tr>') +
+    '</table></div>';
+  $('reload').onclick = loadAdmin;
+  $('mkSheet').onclick = function(){
+    var b=this; b.disabled=true; b.innerHTML='<span class="spin"></span>만드는 중…';
+    call('buildSummaryFromWeb', S.pw).then(function(url){
+      b.disabled=false; b.textContent='주문서 시트 만들기';
+      toast('주문서 시트를 만들었습니다.', 'ok'); window.open(url, '_blank');
+    }).catch(function(e){ toast(errMsg(e),'err'); b.disabled=false; b.textContent='주문서 시트 만들기'; });
+  };
+}
+</script>
+</body>
+</html>
