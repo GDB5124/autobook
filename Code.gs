@@ -779,12 +779,26 @@ function getAdminSummary(pw) {
 
 function buildSummaryFromWeb(pw) {
   checkAdminPw_(pw);
-  buildSummarySheet();
+  buildSummarySheet_();
   return SpreadsheetApp.getActive().getUrl() + '#gid=' + SpreadsheetApp.getActive().getSheetByName(SHEET_SUMMARY).getSheetId();
 }
 
-/** 주문서 시트를 새로 만듭니다 (도서별 합계) */
+/**
+ * 메뉴 전용: [주문서 시트 만들기]
+ * 이름 끝에 _ 가 없어 google.script.run 으로도 부를 수 있으므로, 시트 화면에서만 동작하게 막는다.
+ * 1) 웹앱에서 부르면 SpreadsheetApp.getUi() 가 예외를 던져 여기서 멈춘다.
+ * 2) 그래도 UI 가 잡히는 경우를 대비해, 시트 앞의 사람이 [예]를 눌러야만 진행한다.
+ */
 function buildSummarySheet() {
+  var ui = SpreadsheetApp.getUi();
+  var ans = ui.alert('주문서 시트 만들기',
+    '[' + SHEET_SUMMARY + '] 시트의 기존 내용을 지우고 새로 만듭니다. 계속할까요?', ui.ButtonSet.YES_NO);
+  if (ans !== ui.Button.YES) return;
+  buildSummarySheet_();
+}
+
+/** 주문서 시트를 새로 만듭니다 (도서별 합계). 기존 주문서 내용은 지워짐 — 관리자 확인을 거친 진입점에서만 부를 것 */
+function buildSummarySheet_() {
   var s = summarize_();
   var ss = SpreadsheetApp.getActive();
   var sh = ss.getSheetByName(SHEET_SUMMARY) || ss.insertSheet(SHEET_SUMMARY);
