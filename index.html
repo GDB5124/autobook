@@ -21,7 +21,8 @@
   select,input[type=text],input[type=password],input[type=number]{font:inherit;padding:10px 12px;border:1px solid var(--line);border-radius:8px;background:#fff;min-width:0}
   .who input{flex:1;min-width:160px}
   .tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);margin-top:8px}
-  .tabs button{flex:1;border:0;background:none;padding:12px 4px;font:inherit;font-weight:600;color:var(--sub);border-bottom:3px solid transparent;cursor:pointer}
+  .tabs button{flex:1;border:0;background:none;padding:12px 4px;font:inherit;font-weight:600;color:var(--sub);border-bottom:3px solid transparent;cursor:pointer;white-space:nowrap}
+  @media (max-width:420px){.tabs{gap:0}.tabs button{font-size:14px;padding:12px 2px;letter-spacing:-.3px}}
   .tabs button.on{color:var(--pri);border-color:var(--pri)}
   .pane{display:none}.pane.on{display:block}
   .search{display:flex;gap:8px}
@@ -35,6 +36,8 @@
   .item{display:flex;gap:12px;padding:10px;border:1px solid var(--line);border-radius:10px;background:#fff;cursor:pointer;text-align:left;font:inherit;color:inherit;width:100%}
   .item:hover{border-color:var(--pri)}
   .item img,.detail img{width:64px;height:92px;object-fit:cover;border-radius:4px;background:#eee;flex:none}
+  .nocover{width:64px;height:92px;flex:none;border-radius:4px;border:1px dashed #d1d5db;background:#f9fafb;color:var(--sub);font-size:11px;line-height:1.3;display:flex;align-items:center;justify-content:center;text-align:center}
+  .detail .nocover{width:96px;height:138px;font-size:12px}
   .item .t{font-weight:700}
   .item .s{color:var(--sub);font-size:13px}
   .price{font-weight:700;color:var(--pri)}
@@ -45,11 +48,14 @@
   .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:12px}
   .qtylabel{font-weight:700}
   .qty{display:flex;align-items:center;border:1px solid var(--line);border-radius:8px;overflow:hidden}
-  .qty button{border:0;background:#f3f4f6;width:36px;height:40px;font-size:18px;cursor:pointer}
-  .qty input{width:48px;border:0;text-align:center;border-radius:0;padding:8px 0}
+  .qty button{border:0;background:#f3f4f6;width:44px;height:44px;font-size:18px;cursor:pointer}
+  .qty input{width:48px;height:44px;border:0;text-align:center;border-radius:0;padding:8px 0}
   .badge{display:inline-block;font-size:12px;font-weight:700;padding:2px 8px;border-radius:999px;margin-top:4px}
   .badge.have{background:#fff4e5;color:#b54708}
   .badge.none{background:#f3f4f6;color:var(--sub)}
+  .badge.mine{background:var(--ok-soft);color:var(--ok)}
+  .done{background:var(--ok-soft);border-color:#b7e1c7;color:var(--ok);font-weight:700}
+  .done .row{margin-top:10px}
   .lib{margin-top:12px;border-radius:10px;padding:10px 12px;background:#f9fafb;font-size:14px}
   .lib.have{background:#fff4e5}
   .lib .h{font-weight:700;display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap}
@@ -63,7 +69,7 @@
   .form label.full{grid-column:1/-1}
   .form input{width:100%;font-weight:400}
   @media (max-width:480px){.form{grid-template-columns:1fr}}
-  footer{color:var(--sub);font-size:12px;text-align:center;padding:16px 0 32px}
+  footer{color:var(--sub);font-size:12px;text-align:center;padding:16px 0 96px}
   footer a{color:inherit}
   .update{background:#fff4e5;color:#b54708;border-radius:10px;padding:10px 12px;margin-top:12px;font-size:14px}
   .update a{color:inherit;font-weight:700}
@@ -153,7 +159,35 @@ function call(fn){
   });
 }
 function errMsg(e){ return (e && e.message ? e.message : String(e)).replace(/^Error:\s*/,''); }
-function cover(src){ return src ? '<img src="'+esc(src)+'" referrerpolicy="no-referrer" loading="lazy" onerror="this.style.visibility=\'hidden\'">' : '<img alt="">'; }
+function cover(src){ return src ? '<img src="'+esc(src)+'" alt="" referrerpolicy="no-referrer" loading="lazy" onerror="noCover(this)">' : '<div class="nocover">표지<br>없음</div>'; }
+function noCover(img){ var d=document.createElement('div'); d.className='nocover'; d.innerHTML='표지<br>없음'; img.parentNode.replaceChild(d, img); }
+// 선택한 카드가 화면 안에 다 들어오게: 검색칸부터 카드 끝까지 들어가면 검색칸 위로, 아니면 카드 위로 맞춤
+var GAP_TOP = 16, GAP_BOTTOM = 10;   // 화면 위·아래 여백(px)
+function reveal(el){
+  if (!el) return;
+  var top = $('searchForm').getBoundingClientRect().top, r = el.getBoundingClientRect();
+  var to = (r.bottom - top <= window.innerHeight - GAP_TOP - GAP_BOTTOM) ? top : r.top;
+  if (to >= GAP_TOP && r.bottom <= window.innerHeight - GAP_BOTTOM) return;   // 이미 다 보이면 그대로
+  window.scrollTo({top: Math.max(0, window.pageYOffset + to - GAP_TOP), behavior:'smooth'});
+}
+function isMine(pid){ return !!(S.my && pid && S.my.orders.some(function(o){ return o.pid===pid; })); }
+function markMine(){
+  $('results').querySelectorAll('.minebadge').forEach(function(el){
+    el.innerHTML = isMine(el.dataset.pid) ? '<span class="badge mine">✔ 신청함</span>' : '';
+  });
+  // 완료 카드의 책이 취소되었거나 이름이 바뀌어 내역에 없으면 완료 카드도 치움
+  var d = $('picked').querySelector('.done');
+  if (d && !isMine(d.dataset.pid)) $('picked').innerHTML = '';
+}
+function doneCard(title, qty, pid){
+  $('picked').innerHTML = '<div class="card done" data-pid="'+esc(pid)+'">✅ 신청 완료: '+esc(title)+' '+qty+'권' +
+    '<div class="row"><button type="button" class="btn ghost" id="toMine">내 신청내역 보기</button></div></div>';
+  $('toMine').onclick = function(){
+    document.querySelector('.tabs button[data-tab="mine"]').click();
+    window.scrollTo({top: document.querySelector('.tabs').offsetTop - 10, behavior:'smooth'});
+  };
+  reveal($('picked').firstChild);
+}
 
 /* ---------- 탭 ---------- */
 document.querySelectorAll('.tabs button').forEach(function(b){
@@ -215,12 +249,14 @@ function renderResults(){
       '<div class="s">'+esc(b.author)+'</div>' +
       '<div class="s">'+esc(b.publisher)+(b.pubDate?' · '+esc(b.pubDate):'')+'</div>' +
       (b.salePrice ? '<div class="price">'+won(b.salePrice)+'</div>' : '') +
+      '<div class="minebadge" data-pid="'+esc(b.pid)+'"></div>' +
       '<div class="libbadge" data-isbn="'+esc(b.isbn)+'"></div>' +
       '</div></button>';
   }).join('');
   $('results').querySelectorAll('.item').forEach(function(el){
     el.onclick = function(){ pick(S.results[+el.dataset.i]); };
   });
+  markMine();
   // 우리 학교 도서관 소장 여부 (목록용, ISBN 기준)
   var isbns = S.results.map(function(b){ return b.isbn; }).filter(Boolean);
   if (isbns.length) call('checkLibraryBatch', isbns).then(function(m){
@@ -258,7 +294,7 @@ function renderLib(r, b){
 
 function pick(b){
   $('picked').innerHTML = '<div class="card"><span class="spin"></span>가격·저자 정보를 확인하는 중…</div>';
-  window.scrollTo({top: $('picked').offsetTop - 10, behavior:'smooth'});
+  reveal($('picked').firstChild);
   call('getBook', b.pid).then(showPicked).catch(function(e){
     $('picked').innerHTML = '<div class="card"><div style="color:var(--warn)">'+esc(errMsg(e))+'</div>' +
       '<div class="row"><button type="button" class="btn ghost" id="toManual">직접 입력해서 신청하기</button></div></div>';
@@ -267,7 +303,7 @@ function pick(b){
 }
 
 function showPicked(b){
-  var already = S.my && S.my.orders.some(function(o){ return o.pid===b.pid; });
+  var already = isMine(b.pid);
   $('picked').innerHTML =
     '<div class="card" style="border-color:var(--pri)"><div class="detail">' + cover(b.cover) +
     '<div><div class="t">'+esc(b.title)+'</div>' +
@@ -283,8 +319,11 @@ function showPicked(b){
     '<button class="btn" id="submitBtn">이 책 신청하기</button>' +
     '<button class="btn ghost" id="cancelPick">다른 책 고르기</button></div>') +
     '</div>';
+  var card = $('picked').firstChild;
+  reveal(card);
   call('checkLibrary', b.isbn, b.title).then(function(r){ renderLib(r, b); })
-    .catch(function(){ var el=$('libBox'); if (el) el.innerHTML='도서관 정보를 불러오지 못했어요.'; });
+    .catch(function(){ var el=$('libBox'); if (el) el.innerHTML='도서관 정보를 불러오지 못했어요.'; })
+    .then(function(){ if (card.isConnected) reveal(card); });   // 도서관 칸이 커진 뒤 다시 맞춤
   if (already) return;
   $('qm').onclick=function(){ $('qty').value=Math.max(1,(+$('qty').value||1)-1); };
   $('qp').onclick=function(){ $('qty').value=(+$('qty').value||1)+1; };
@@ -306,8 +345,7 @@ function submit(b){
   } btn.disabled = true; btn.innerHTML = '<span class="spin"></span>신청 중…';
   call('submitOrder', S.name, b.pid, qty).then(function(my){
     S.my = my; renderMine();
-    $('picked').innerHTML = '<div class="card" style="background:var(--ok-soft);border-color:#b7e1c7;color:var(--ok);font-weight:700">✅ 신청 완료: '+esc(b.title)+' '+qty+'권</div>';
-    toast('신청했습니다!', 'ok');
+    doneCard(b.title, qty, b.pid);
   }).catch(function(e){
     toast(errMsg(e), 'err'); btn.disabled=false; btn.textContent='이 책 신청하기';
   });
@@ -350,8 +388,8 @@ function showManual(p){
   $('mTitle').onchange = lib; $('mIsbn').onchange = lib;
   if (p.title || p.isbn) lib();
   $('mSubmit').onclick = submitManual;
-  $('mTitle').focus();
-  window.scrollTo({top: $('picked').offsetTop - 10, behavior:'smooth'});
+  $('mTitle').focus({preventScroll:true});
+  reveal($('picked').firstChild);
 }
 function submitManual(){
   setName($('name').value);
@@ -372,8 +410,7 @@ function submitManual(){
   btn.disabled = true; btn.innerHTML = '<span class="spin"></span>신청 중…';
   call('submitManualOrder', S.name, info, qty).then(function(my){
     S.my = my; renderMine();
-    $('picked').innerHTML = '<div class="card" style="background:var(--ok-soft);border-color:#b7e1c7;color:var(--ok);font-weight:700">✅ 신청 완료: '+esc(info.title)+' '+qty+'권</div>';
-    toast('신청했습니다!', 'ok');
+    doneCard(info.title, qty, my.orders[0] && my.orders[0].pid);   // 직접 입력 책의 코드는 서버가 정함 → 내역 맨 위(방금 신청)
   }).catch(function(e){ toast(errMsg(e), 'err'); btn.disabled=false; btn.textContent='이 책 신청하기'; });
 }
 
@@ -386,6 +423,7 @@ function loadMine(){
 }
 function renderMine(){
   var el = $('mine');
+  markMine();   // 검색 목록의 "신청함" 배지도 내역에 맞춤
   if (!S.name){ el.innerHTML = '<div class="empty">위에 이름을 먼저 입력하세요.</div>'; return; }
   if (!S.my){ el.innerHTML = '<div class="empty"><span class="spin"></span>불러오는 중…</div>'; return; }
   if (!S.my.orders.length){ el.innerHTML = '<div class="empty">아직 신청한 책이 없어요.</div>'; return; }
