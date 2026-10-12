@@ -427,7 +427,7 @@ function renderAdmin(s){
     '<div class="row"><button class="btn" id="mkSheet">주문서 시트 만들기</button><button class="btn ghost" id="reload">새로고침</button></div>' +
     '<div class="tbl" style="margin-top:12px"><table><tr><th>도서명</th><th>출판사</th><th class="n">'+esc(s.basis)+'</th><th class="n">수량</th><th class="n">금액</th></tr>' +
     (s.books.length ? s.books.map(function(b){
-      return '<tr><td>'+esc(b.title)+(b.lib && b.lib!=='미소장' ? ' <span class="badge have">'+esc(b.lib)+'</span>' : '')+'<div class="hint" style="margin:0">'+esc(b.people.join(', '))+'</div></td><td>'+esc(b.publisher)+'</td><td class="n">'+won(b.unit)+'</td><td class="n">'+b.qty+'</td><td class="n">'+won(b.amount)+'</td></tr>';
+      return '<tr><td>'+esc(b.title)+(b.lib && b.lib!=='미소장' ? ' <span class="badge have">'+esc(b.lib)+'</span>' : '')+'<div class="hint" style="margin:0">'+esc(b.people.join(', '))+'</div></td><td>'+esc(b.publisher)+'</td><td class="n">'+(b.mixedPrice?'신청별 상이':won(b.unit))+'</td><td class="n">'+b.qty+'</td><td class="n">'+won(b.amount)+'</td></tr>';
     }).join('') : '<tr><td colspan="5" class="empty">신청 내역이 없습니다.</td></tr>') +
     '</table></div>';
   $('reload').onclick = loadAdmin;

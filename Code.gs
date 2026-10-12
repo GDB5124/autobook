@@ -10,13 +10,13 @@
  */
 
 /* ===================== 설정 ===================== */
-var VERSION = '1.1.0';
-var VERSION_DATE = '2026-10-07';
+var VERSION = '1.1.2';
+var VERSION_DATE = '2026-10-12';
 var AUTHOR = '구두방장선생';
 var AUTHOR_URL = 'https://blog.naver.com/qkfkekdl';
 // 새 버전 알림: 최신 버전 정보를 담은 JSON 주소 (비우면 확인 안 함)
 // 형식: {"latest":"1.2.0","date":"2026-11-01","url":"블로그 글 주소","notes":"바뀐 점 한 줄"}
-var UPDATE_URL = 'https://raw.githubusercontent.com/GDB5124/book-request-webapp/main/version.json';
+var UPDATE_URL = 'https://raw.githubusercontent.com/GDB5124/autobook/main/version.json';
 var DEFAULT_PW = '1234';
 var SHEET_ORDERS = '신청내역';
 var SHEET_CONF = '웹앱설정';
@@ -57,7 +57,7 @@ function onOpen() {
     .addItem('② 학교도서관 연결하기', 'connectLibrary')
     .addItem('③ 설정 점검', 'checkSetup')
     .addSeparator()
-    .addItem('주문서 시트 만들기', 'buildSummarySheet')
+    .addItem('주문서 시트 만들기', 'buildSummarySheet_')
     .addItem('웹앱 주소 보기', 'showWebAppUrl')
     .addItem('버전 정보', 'showVersion')
     .addToUi();
@@ -66,6 +66,8 @@ function onOpen() {
 /* ===================== 초기 세팅 ===================== */
 function setup() {
   var ss = SpreadsheetApp.getActive();
+  if (!ss) throw new Error('스프레드시트 메뉴에서 [처음 세팅]을 실행하세요.');
+  PropertiesService.getScriptProperties().setProperty('SPREADSHEET_ID', ss.getId());
 
   var o = ss.getSheetByName(SHEET_ORDERS) || ss.insertSheet(SHEET_ORDERS);
   if (o.getLastRow() === 0) {
@@ -83,7 +85,7 @@ function setup() {
     c.getRange(1, 1, 1, 3).setFontWeight('bold').setBackground('#e8f0fe');
     c.setColumnWidth(1, 140); c.setColumnWidth(2, 260); c.setColumnWidth(3, 360);
   }
-  SpreadsheetApp.getActive().toast('시트 준비 완료! 다음은 [② 학교도서관 연결하기] 입니다.', '도서신청', 8);
+  ss.toast('시트 준비 완료! 다음은 [② 학교도서관 연결하기] 입니다.', '도서신청', 8);
   if (!libConf_().neis) {
     try { connectLibrary(); } catch (e) { /* 편집기에서 실행한 경우 등 UI 없음 */ }
   }
@@ -91,8 +93,8 @@ function setup() {
 
 /** 웹앱설정 시트의 값 하나를 바꿈 (없으면 행 추가) */
 function setConf_(key, value) {
-  var sh = SpreadsheetApp.getActive().getSheetByName(SHEET_CONF);
-  if (!sh) { setup(); sh = SpreadsheetApp.getActive().getSheetByName(SHEET_CONF); }
+  var sh = getSpreadsheet_().getSheetByName(SHEET_CONF);
+  if (!sh) throw new Error('스프레드시트 메뉴에서 [처음 세팅]을 실행하세요.');
   var n = sh.getLastRow();
   var keys = n > 1 ? sh.getRange(2, 1, n - 1, 1).getValues() : [];
   for (var i = 0; i < keys.length; i++) {
@@ -141,7 +143,9 @@ function checkLibraryConnection_() {
   if (!lc.neis || !lc.prov) return { ok: false, msg: '학교도서관이 연결되지 않았습니다 (소장 확인 꺼짐).' };
   var words = ['책', '이야기', '수학'];
   for (var i = 0; i < words.length; i++) {
-    var list = libParseList_(libFetch_(libSearchRequest_(words[i], lc, 5)));
+    var list;
+    try { list = libParseList_(libFetch_(libSearchRequest_(words[i], lc, 5))); }
+    catch (e) { return { ok: false, msg: '학교도서관 조회 실패: ' + e.message }; }
     if (list.length) {
       var name = list[0].schoolName || list[0].libName || lc.school;
       return { ok: true, msg: '학교도서관 연결됨: ' + name + ' (' + lc.prov + ' / ' + lc.neis + ')' };
@@ -150,8 +154,21 @@ function checkLibraryConnection_() {
   return { ok: false, msg: '학교도서관 검색 결과가 없습니다. 코드(' + lc.prov + ' / ' + lc.neis + ')가 맞는지 확인하세요.' };
 }
 
+/** 메뉴 실행 때 부모 시트 ID를 기억하고, 웹앱에서는 ID로 엽니다. */
+function getSpreadsheet_() {
+  var props = PropertiesService.getScriptProperties();
+  var active = SpreadsheetApp.getActive();
+  if (active) {
+    props.setProperty('SPREADSHEET_ID', active.getId());
+    return active;
+  }
+  var id = props.getProperty('SPREADSHEET_ID');
+  if (!id) throw new Error('스프레드시트 메뉴에서 [처음 세팅] 또는 [설정 점검]을 실행한 뒤 배포하세요.');
+  return SpreadsheetApp.openById(id);
+}
+
 function getConf_() {
-  var sh = SpreadsheetApp.getActive().getSheetByName(SHEET_CONF);
+  var sh = getSpreadsheet_().getSheetByName(SHEET_CONF);
   var conf = {};
   DEFAULT_CONF.forEach(function (r) { conf[r[0]] = r[1]; });
   if (sh && sh.getLastRow() > 1) {
@@ -167,11 +184,17 @@ function fetchHtml_(url) {
   var res = UrlFetchApp.fetch(url, {
     muteHttpExceptions: true,
     followRedirects: true,
-    headers: { 'User-Agent': UA, 'Accept-Language': 'ko-KR,ko;q=0.9' }
+    headers: {
+      'User-Agent': UA, 'Accept-Language': 'ko-KR,ko;q=0.9',
+      'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+      'Referer': 'https://search.kyobobook.co.kr/'
+    }
   });
   var code = res.getResponseCode();
   if (code !== 200) throw new Error('교보문고 응답 오류 (HTTP ' + code + ')');
-  return res.getContentText('UTF-8');
+  var html = res.getContentText('UTF-8');
+  if (!html.trim()) throw new Error('교보문고가 빈 응답을 반환했습니다. 잠시 후 다시 시도하거나 직접 입력하세요.');
+  return html;
 }
 
 function cacheGet_(key) {
@@ -462,11 +485,13 @@ function libFetch_(req) {
 }
 
 function libParseList_(res) {
-  if (res.getResponseCode() !== 200) return [];
+  if (res.getResponseCode() !== 200) throw new Error('학교도서관 응답 오류 (HTTP ' + res.getResponseCode() + ')');
+  var j;
   try {
-    var j = JSON.parse(res.getContentText('UTF-8'));
-    return (j && j.data && j.data.bookList) || [];
-  } catch (e) { return []; }
+    j = JSON.parse(res.getContentText('UTF-8'));
+  } catch (e) { throw new Error('학교도서관 응답을 읽지 못했습니다.'); }
+  if (!j || !j.data || !Array.isArray(j.data.bookList)) throw new Error('학교도서관 검색 응답 형식이 올바르지 않습니다.');
+  return j.data.bookList;
 }
 
 function libSearchUrl_(keyword, lc) {
@@ -488,7 +513,7 @@ function checkLibrary(isbn, title) {
   var lc = libConf_();
   if (!lc.neis || !lc.prov) return { match: 'off', holdings: [] };
   isbn = String(isbn || '').replace(/[^\dX]/gi, '');
-  var key = 'lib:' + isbn + ':' + normTitle_(title).slice(0, 40);
+  var key = 'lib:v2:' + lc.prov + ':' + lc.neis + ':' + isbn + ':' + normTitle_(title).slice(0, 40);
   var cached = cacheGet_(key);
   if (cached) return cached;
 
@@ -542,7 +567,7 @@ function checkLibraryBatch(isbns) {
   isbns = isbns.map(function (x) { return String(x || '').replace(/[^\dX]/gi, ''); }).filter(String).slice(0, 20);
   var out = {}, need = [];
   isbns.forEach(function (i) {
-    var c = cacheGet_('libn:' + i);
+    var c = cacheGet_('libn:v2:' + lc.prov + ':' + lc.neis + ':' + i);
     if (c !== null) out[i] = c; else need.push(i);
   });
   if (need.length) {
@@ -550,7 +575,7 @@ function checkLibraryBatch(isbns) {
     need.forEach(function (i, k) {
       var n = libParseList_(res[k]).filter(function (b) { return String(b.isbn || '').replace(/[^\dX]/gi, '') === i; }).length;
       out[i] = n;
-      cachePut_('libn:' + i, n, 1800);
+      cachePut_('libn:v2:' + lc.prov + ':' + lc.neis + ':' + i, n, 1800);
     });
   }
   return out;
@@ -573,8 +598,8 @@ function safeCell_(v) {
 }
 
 function ordersSheet_() {
-  var sh = SpreadsheetApp.getActive().getSheetByName(SHEET_ORDERS);
-  if (!sh) { setup(); sh = SpreadsheetApp.getActive().getSheetByName(SHEET_ORDERS); }
+  var sh = getSpreadsheet_().getSheetByName(SHEET_ORDERS);
+  if (!sh) throw new Error('스프레드시트 메뉴에서 [처음 세팅]을 실행하세요.');
   var last = ORDER_HEADERS.length;
   if (sh.getRange(1, last).getValue() !== ORDER_HEADERS[last - 1]) {   // 예전 버전 시트에 새 열 제목 추가
     sh.getRange(1, last).setValue(ORDER_HEADERS[last - 1]).setFontWeight('bold').setBackground('#e8f0fe');
@@ -609,6 +634,17 @@ function readOrders_() {
 /** 이름 정리: 공백 제거 ('김 교사' → '김교사') */
 function normName_(n) {
   return String(n || '').replace(/\s+/g, '').slice(0, 20);
+}
+
+/** 직접 입력의 기존 ID 충돌도 저장된 전체 서지 정보로 구분합니다. */
+function bookKey_(book) {
+  var pid = String(book.pid || '');
+  if (pid.indexOf('직접입력:') !== 0) return pid || book.title;
+  var isbn = String(book.isbn || '').replace(/[^\dX]/gi, '').toUpperCase();
+  if (isbn) return '직접입력:' + isbn;
+  return '직접입력:' + JSON.stringify([book.title, book.author, book.publisher].map(function (s) {
+    return String(s || '').replace(/\s+/g, ' ').trim().toLowerCase();
+  }));
 }
 
 /** 마감일시 값 → Date (없으면 null, 형식 오류면 Invalid Date) */
@@ -670,7 +706,7 @@ function submitManualOrder(name, info, qty) {
   var isbn = String(info.isbn || '').replace(/[^\dX]/gi, '');
   var link = String(info.url || '').trim();
   var book = {
-    pid: '직접입력:' + (isbn || normTitle_(title).slice(0, 30)),
+    pid: '직접입력:',
     title: title.slice(0, 200),
     author: String(info.author || '').trim().slice(0, 100),
     publisher: String(info.publisher || '').trim().slice(0, 100),
@@ -678,6 +714,8 @@ function submitManualOrder(name, info, qty) {
     isbn: isbn, pubDate: '',
     url: /^https?:\/\//.test(link) ? link.slice(0, 300) : ''
   };
+  book.pid = '직접입력:' + Utilities.base64EncodeWebSafe(Utilities.computeDigest(
+    Utilities.DigestAlgorithm.SHA_256, bookKey_(book), Utilities.Charset.UTF_8));
   return writeOrder_(v.name, v.qty, book, v.conf);
 }
 
@@ -701,7 +739,7 @@ function writeOrder_(name, qty, book, conf) {
   lock.waitLock(20000);
   try {
     var mine = readOrders_().filter(function (o) { return normName_(o.name) === name && o.status !== '취소'; });
-    if (mine.some(function (o) { return o.pid === book.pid; })) {
+    if (mine.some(function (o) { return bookKey_(o) === bookKey_(book); })) {
       throw new Error('이미 신청한 책입니다: ' + book.title + ' (권수를 바꾸려면 내 신청내역에서 취소 후 다시 신청하세요)');
     }
     var basis = String(conf['금액기준']) === '할인가' ? book.salePrice : book.originalPrice;
@@ -738,19 +776,22 @@ function summarize_() {
   var conf = getConf_();
   var basisSale = String(conf['금액기준']) === '할인가';
   var orders = readOrders_().filter(function (o) { return o.status !== '취소'; });
-  var byBook = {}, byPerson = {};
+  var byBook = Object.create(null), byPerson = Object.create(null);
   orders.forEach(function (o) {
-    var k = o.pid || o.title;
+    var k = bookKey_(o);
     if (!byBook[k]) byBook[k] = { title: o.title, publisher: o.publisher, author: o.author, isbn: o.isbn,
-      originalPrice: o.originalPrice, salePrice: o.salePrice, qty: 0, people: [], lib: o.lib };
+      originalPrice: o.originalPrice, salePrice: o.salePrice, qty: 0, amount: 0, people: [], lib: o.lib };
+    if (byBook[k].originalPrice !== o.originalPrice) byBook[k].originalPrice = '신청별 상이';
+    if (byBook[k].salePrice !== o.salePrice) byBook[k].salePrice = '신청별 상이';
     byBook[k].qty += o.qty;
+    byBook[k].amount += (basisSale ? o.salePrice : o.originalPrice) * o.qty;
     byBook[k].people.push(o.name + (o.qty > 1 ? '(' + o.qty + ')' : ''));
     byPerson[normName_(o.name)] = (byPerson[normName_(o.name)] || 0) + o.qty;
   });
   var books = Object.keys(byBook).map(function (k) {
     var b = byBook[k];
     b.unit = basisSale ? b.salePrice : b.originalPrice;
-    b.amount = b.unit * b.qty;
+    b.mixedPrice = b.unit === '신청별 상이';
     return b;
   }).sort(function (a, b) { return b.qty - a.qty || a.title.localeCompare(b.title); });
   return {
@@ -779,14 +820,15 @@ function getAdminSummary(pw) {
 
 function buildSummaryFromWeb(pw) {
   checkAdminPw_(pw);
-  buildSummarySheet();
-  return SpreadsheetApp.getActive().getUrl() + '#gid=' + SpreadsheetApp.getActive().getSheetByName(SHEET_SUMMARY).getSheetId();
+  buildSummarySheet_();
+  var ss = getSpreadsheet_();
+  return ss.getUrl() + '#gid=' + ss.getSheetByName(SHEET_SUMMARY).getSheetId();
 }
 
 /** 주문서 시트를 새로 만듭니다 (도서별 합계) */
-function buildSummarySheet() {
+function buildSummarySheet_() {
   var s = summarize_();
-  var ss = SpreadsheetApp.getActive();
+  var ss = getSpreadsheet_();
   var sh = ss.getSheetByName(SHEET_SUMMARY) || ss.insertSheet(SHEET_SUMMARY);
   sh.clear();
   var head = ['순번', '도서명', '출판사', '지은이', 'ISBN', '정가', '할인가', '수량', '금액(' + s.basis + ')', '신청자', '학교소장'];
@@ -802,7 +844,16 @@ function buildSummarySheet() {
     sh.getRange(2, 6, rows.length + 1, 4).setNumberFormat('#,##0');
   }
   sh.setFrozenRows(1);
+  var rowCount = rows.length ? rows.length + 2 : 1;
+  sh.getRange(1, 1, rowCount, head.length).setWrap(true).setVerticalAlignment('middle');
   sh.autoResizeColumns(1, head.length);
-  sh.setColumnWidth(2, 320);
+  // 내용에 맞춘 너비에 여백을 더하고, 긴 제목·신청자 목록은 줄바꿈합니다.
+  var minWidths = [50, 240, 100, 100, 130, 100, 100, 60, 120, 160, 160];
+  var maxWidths = [70, 420, 200, 240, 160, 130, 130, 80, 150, 360, 300];
+  for (var col = 1; col <= head.length; col++) {
+    sh.setColumnWidth(col, Math.max(minWidths[col - 1], Math.min(maxWidths[col - 1], sh.getColumnWidth(col) + 12)));
+  }
+  SpreadsheetApp.flush();
+  sh.autoResizeRows(1, rowCount);
   try { ss.toast('주문서 시트를 만들었습니다 (' + rows.length + '종 ' + s.totalQty + '권)', '도서신청', 5); } catch (e) { }
 }
