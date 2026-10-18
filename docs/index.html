@@ -29,7 +29,7 @@
       try {
         const u = new URL(value);
         if (u.protocol !== 'https:' || u.hostname !== 'script.google.com' || u.username || u.password || u.port) return '';
-        const m = u.pathname.match(/^\/macros\/(?:u\/\d+\/)?s\/([^/]+)\/exec\/?$/);
+        const m = u.pathname.match(/^\/(?:macros\/(?:u\/\d+\/)?|a\/[A-Za-z0-9.-]+\/macros\/|a\/macros\/[A-Za-z0-9.-]+\/)s\/([^/]+)\/exec\/?$/);
         return m && idPattern.test(m[1]) ? m[1] : '';
       } catch (_) { return ''; }
     }
