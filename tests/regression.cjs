@@ -50,9 +50,29 @@ test('shared web app links strip account routing and reject development or forei
   const links = c.webAppLinks_('https://script.google.com/macros/u/1/s/' + id + '/exec?authuser=1#section');
   assert.equal(links.direct, 'https://script.google.com/macros/s/' + id + '/exec');
   assert.equal(links.entry, 'https://gdb5124.github.io/autobook/?app=' + id);
+  assert.equal(c.webAppLinks_('https://script.google.com/a/macros/school.example/s/' + id + '/exec').direct, links.direct);
+  assert.equal(c.webAppLinks_('https://script.google.com/a/school.example/macros/s/' + id + '/exec').direct, links.direct);
   for (const url of ['', 'https://evil.example/macros/s/' + id + '/exec',
     'https://script.google.com.evil.example/macros/s/' + id + '/exec',
     'https://script.google.com/macros/s/' + id + '/dev']) assert.equal(c.webAppLinks_(url), null);
+});
+test('sharing uses a registered URL for the current sheet and never an old copied deployment', () => {
+  const id = 'AKfy' + 'a'.repeat(40);
+  const props = properties({PUBLIC_WEB_APP_SHEET_ID:'original', PUBLIC_WEB_APP_URL:'https://script.google.com/macros/s/'+id+'/exec'});
+  let sheetId='copy', prompted=0, message='';
+  const c=load({PropertiesService:{getScriptProperties:()=>props}, SpreadsheetApp:{getActive:()=>({getId:()=>sheetId}),getUi:()=>({alert:text=>{message=text;}})}});
+  c.setWebAppUrl=()=>{prompted++;}; c.showWebAppUrl();
+  assert.equal(prompted,1); assert.equal(message,'');
+  sheetId='original'; c.showWebAppUrl(); assert.match(message,/gdb5124.github.io\/autobook\/\?app=/);
+});
+test('public URL registration validates before writing and binds the current sheet', () => {
+  const props=properties(); let response='https://evil.example/';
+  const ui={Button:{OK:'ok'},ButtonSet:{OK_CANCEL:'buttons'},prompt:()=>({getSelectedButton:()=> 'ok',getResponseText:()=>response}),alert:()=>{}};
+  const c=load({PropertiesService:{getScriptProperties:()=>props},SpreadsheetApp:{getActive:()=>({getId:()=> 'sheet-copy'}),getUi:()=>ui}});
+  c.showWebAppUrl=()=>{}; c.setWebAppUrl(); assert.equal(props.getProperty('PUBLIC_WEB_APP_URL'),undefined);
+  const id='AKfy'+'b'.repeat(40); response='https://script.google.com/macros/u/1/s/'+id+'/exec?authuser=1';
+  c.setWebAppUrl(); assert.equal(props.getProperty('PUBLIC_WEB_APP_URL'),'https://script.google.com/macros/s/'+id+'/exec');
+  assert.equal(props.getProperty('PUBLIC_WEB_APP_SHEET_ID'),'sheet-copy');
 });
 test('summary generator is private and web entry rejects invalid passwords before writes', () => {
   const c = load(); c.getConf_ = () => ({'관리자비밀번호': 'secret'});
