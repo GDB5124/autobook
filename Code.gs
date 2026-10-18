@@ -10,8 +10,8 @@
  */
 
 /* ===================== 설정 ===================== */
-var VERSION = '1.1.2';
-var VERSION_DATE = '2026-10-12';
+var VERSION = '1.1.3';
+var VERSION_DATE = '2026-10-18';
 var AUTHOR = '구두방장선생';
 var AUTHOR_URL = 'https://blog.naver.com/qkfkekdl';
 // 새 버전 알림: 최신 버전 정보를 담은 JSON 주소 (비우면 확인 안 함)
@@ -295,8 +295,20 @@ function testKyobo() { return checkSetup(); }
 function showWebAppUrl() {
   var url = '';
   try { url = ScriptApp.getService().getUrl() || ''; } catch (e) { }
-  SpreadsheetApp.getUi().alert(url ? '교직원에게 이 주소를 공유하세요:\n\n' + url :
+  var links = webAppLinks_(url);
+  SpreadsheetApp.getUi().alert(links ? '교직원용 접속 주소 (최신 Chrome·Edge 권장):\n\n' + links.entry +
+    '\n\n원래 웹앱 주소:\n' + links.direct +
+    '\n\nGoogle 로그인이 필요하지 않습니다. 접속 화면을 다시 열면 신청자 이름을 다시 입력하세요.' +
+    '\n현재 파일을 열 수 없다는 오류가 나면 시크릿 창에서 원래 주소를 여세요. 여러 Google 계정 로그인은 Apps Script에서 지원하지 않습니다.' :
     '아직 웹앱으로 배포하지 않았습니다.\n확장 프로그램 > Apps Script > 배포 > 새 배포 > 웹 앱');
+}
+
+/** 계정 경로·인증 쿼리가 포함된 주소를 공유하지 않도록 정규화합니다. */
+function webAppLinks_(url) {
+  var m = String(url || '').match(/^https:\/\/script\.google\.com\/macros\/(?:u\/\d+\/)?s\/(AKfy[A-Za-z0-9_-]{20,})\/exec\/?(?:[?#].*)?$/);
+  if (!m) return null;
+  return { direct: 'https://script.google.com/macros/s/' + m[1] + '/exec',
+    entry: 'https://gdb5124.github.io/autobook/?app=' + encodeURIComponent(m[1]) };
 }
 
 /** 메뉴: 버전 정보 */
