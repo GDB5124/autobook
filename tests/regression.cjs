@@ -44,6 +44,16 @@ test('missing installation gives a setup instruction', () => {
   const c = load({PropertiesService: {getScriptProperties: () => properties()}, SpreadsheetApp: {getActive: () => null}});
   assert.throws(() => c.getInitData(), /처음 세팅/);
 });
+test('shared web app links strip account routing and reject development or foreign URLs', () => {
+  const c = load();
+  const id = 'AKfy' + 'a'.repeat(40);
+  const links = c.webAppLinks_('https://script.google.com/macros/u/1/s/' + id + '/exec?authuser=1#section');
+  assert.equal(links.direct, 'https://script.google.com/macros/s/' + id + '/exec');
+  assert.equal(links.entry, 'https://gdb5124.github.io/autobook/?app=' + id);
+  for (const url of ['', 'https://evil.example/macros/s/' + id + '/exec',
+    'https://script.google.com.evil.example/macros/s/' + id + '/exec',
+    'https://script.google.com/macros/s/' + id + '/dev']) assert.equal(c.webAppLinks_(url), null);
+});
 test('summary generator is private and web entry rejects invalid passwords before writes', () => {
   const c = load(); c.getConf_ = () => ({'관리자비밀번호': 'secret'});
   let builds = 0; c.buildSummarySheet_ = () => {builds++;};
