@@ -58,6 +58,7 @@ function onOpen() {
     .addItem('③ 설정 점검', 'checkSetup')
     .addSeparator()
     .addItem('주문서 시트 만들기', 'buildSummarySheet_')
+    .addItem('웹앱 주소 등록·변경', 'setWebAppUrl')
     .addItem('웹앱 주소 보기', 'showWebAppUrl')
     .addItem('버전 정보', 'showVersion')
     .addToUi();
@@ -293,19 +294,38 @@ function testKyobo() { return checkSetup(); }
 
 /** 메뉴: 웹앱 주소 보기 */
 function showWebAppUrl() {
-  var url = '';
-  try { url = ScriptApp.getService().getUrl() || ''; } catch (e) { }
+  var ss = SpreadsheetApp.getActive();
+  if (!ss) throw new Error('스프레드시트 메뉴에서 실행하세요.');
+  var props = PropertiesService.getScriptProperties();
+  var url = props.getProperty('PUBLIC_WEB_APP_SHEET_ID') === ss.getId() ? props.getProperty('PUBLIC_WEB_APP_URL') : '';
+  if (!url) { setWebAppUrl(); return; }
   var links = webAppLinks_(url);
   SpreadsheetApp.getUi().alert(links ? '교직원용 접속 주소 (최신 Chrome·Edge 권장):\n\n' + links.entry +
     '\n\n원래 웹앱 주소:\n' + links.direct +
     '\n\nGoogle 로그인이 필요하지 않습니다. 접속 화면을 다시 열면 신청자 이름을 다시 입력하세요.' +
     '\n현재 파일을 열 수 없다는 오류가 나면 시크릿 창에서 원래 주소를 여세요. 여러 Google 계정 로그인은 Apps Script에서 지원하지 않습니다.' :
-    '아직 웹앱으로 배포하지 않았습니다.\n확장 프로그램 > Apps Script > 배포 > 새 배포 > 웹 앱');
+    (url ? '공개 웹앱 주소를 자동으로 확인하지 못했습니다.\n배포 > 배포 관리에서 웹 앱 URL(/exec)을 확인하세요.\n확인된 주소: ' + url :
+    '아직 웹앱으로 배포하지 않았습니다.\n확장 프로그램 > Apps Script > 배포 > 새 배포 > 웹 앱'));
+}
+
+/** 자동 감지 주소는 보관된 배포를 가리킬 수 있어, 실제 배포 관리의 주소를 등록합니다. */
+function setWebAppUrl() {
+  var ui = SpreadsheetApp.getUi(), ss = SpreadsheetApp.getActive();
+  if (!ss) throw new Error('스프레드시트 메뉴에서 실행하세요.');
+  var response = ui.prompt('공개 웹앱 주소 등록',
+    'Apps Script > 배포 > 배포 관리에서 사용 중인 웹 앱 URL(/exec)을 복사해 붙여넣으세요.\n배포를 새로 만들었으면 새 주소를 등록하세요.', ui.ButtonSet.OK_CANCEL);
+  if (response.getSelectedButton() !== ui.Button.OK) return;
+  var links = webAppLinks_(response.getResponseText().trim());
+  if (!links) { ui.alert('올바른 Google Apps Script 웹앱 주소(/exec)를 입력하세요. 테스트 주소(/dev)는 사용할 수 없습니다.'); return; }
+  var props = PropertiesService.getScriptProperties();
+  props.setProperty('PUBLIC_WEB_APP_URL', links.direct);
+  props.setProperty('PUBLIC_WEB_APP_SHEET_ID', ss.getId());
+  showWebAppUrl();
 }
 
 /** 계정 경로·인증 쿼리가 포함된 주소를 공유하지 않도록 정규화합니다. */
 function webAppLinks_(url) {
-  var m = String(url || '').match(/^https:\/\/script\.google\.com\/macros\/(?:u\/\d+\/)?s\/(AKfy[A-Za-z0-9_-]{20,})\/exec\/?(?:[?#].*)?$/);
+  var m = String(url || '').match(/^https:\/\/script\.google\.com\/(?:macros\/(?:u\/\d+\/)?|a\/[A-Za-z0-9.-]+\/macros\/|a\/macros\/[A-Za-z0-9.-]+\/)s\/(AKfy[A-Za-z0-9_-]{20,})\/exec\/?(?:[?#].*)?$/);
   if (!m) return null;
   return { direct: 'https://script.google.com/macros/s/' + m[1] + '/exec',
     entry: 'https://gdb5124.github.io/autobook/?app=' + encodeURIComponent(m[1]) };
