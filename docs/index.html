@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="referrer" content="no-referrer">
+  <title>도서신청</title>
+  <style>
+    *{box-sizing:border-box}body{margin:0;background:#f5f7fb;color:#182b3b;font:16px/1.6 system-ui,sans-serif}header{background:#fff;border-bottom:1px solid #dce4ef;padding:12px 24px;display:flex;align-items:center;gap:18px;flex-wrap:wrap}header strong{font-size:20px}header a{font-size:14px;color:#235bc6}main{max-width:720px;margin:48px auto;padding:30px;background:#fff;border:1px solid #dce4ef;border-radius:16px}h1{font-size:28px;margin:0 0 12px}p{color:#526779}label{display:block;margin:22px 0 8px;font-weight:600}input{width:100%;padding:13px;border:1px solid #a4b5c8;border-radius:8px;font:inherit}button,.button{background:#235bc6;color:#fff;border:0;border-radius:8px;padding:12px 20px;font:inherit;cursor:pointer;display:inline-block;text-decoration:none;margin-top:14px}#error{color:#b42318}#appFrame{display:block;width:100%;height:calc(100dvh - 68px);min-height:650px;border:0;background:white}details{font-size:14px;max-width:850px;margin:12px auto;padding:0 20px}summary{cursor:pointer}#help p{margin:8px 0}#copyStatus{font-size:14px}#remember{background:#eef4ff;color:#334d73;padding:9px 20px;text-align:center;font-size:14px}[hidden]{display:none!important}
+  </style>
+  <style>header{min-height:64px;line-height:24px}#remember{margin:0;padding:8px 20px;line-height:24px}#appFrame{height:calc(100dvh - 104px)}</style>
+</head>
+<body>
+  <header><strong>📚 도서신청</strong><a id="direct" hidden target="_blank" rel="noopener noreferrer">원래 주소 열기</a><a href="https://github.com/GDB5124/autobook" target="_blank" rel="noopener noreferrer">설치 안내</a></header>
+  <main id="setup">
+    <h1>우리 학교 도서신청 열기</h1>
+    <p>담당자에게 받은 Apps Script 웹앱 주소를 입력하세요. Google 계정 전환으로 생기는 접속 오류를 줄여 줍니다.</p>
+    <form id="openForm"><label for="appUrl">웹앱 주소</label><input id="appUrl" type="url" required placeholder="https://script.google.com/macros/s/…/exec" autocomplete="off"><button type="submit">도서신청 열기</button><p id="error" role="alert"></p></form>
+  </main>
+  <p id="remember" hidden>Google 로그인 없이 이용합니다. 이 접속 화면을 다시 열면 신청자 이름을 다시 입력해 주세요.</p>
+  <main id="unsupported" hidden><h1>이 브라우저에서는 직접 접속해 주세요</h1><p>계정 분리 접속 기능을 지원하지 않습니다. 최신 Chrome 또는 Edge를 사용하거나, 시크릿·개인정보 보호 창에서 원래 주소를 여세요. 공개 배포된 신청 화면은 Google 로그인이 필요하지 않습니다.</p><a id="fallback" class="button" target="_blank" rel="noopener noreferrer">원래 주소 열기</a><p id="fallbackUrl"></p></main>
+  <iframe id="appFrame" title="학교 도서신청 화면" credentialless hidden></iframe>
+  <details id="help" hidden><summary>화면이 안 열리거나 공유 주소가 필요한가요?</summary><p>최신 Chrome·Edge에서 다시 열어 보세요. Google 오류 화면이 계속 나오면 시크릿 창에서 원래 주소를 여세요. 담당자는 배포 설정의 실행 계정이 ‘나’, 접근 범위가 ‘모든 사용자’인지 확인하세요.</p><p>신청자 이름은 화면을 새로 열 때마다 입력해야 합니다. 이름으로 조회하므로 이전과 같은 이름을 사용해 주세요.</p><button id="copy" type="button">이 접속 주소 복사</button> <span id="copyStatus" role="status"></span><p>다른 학교 주소를 입력하기 전, 담당자가 보낸 링크인지 확인하세요.</p></details>
+  <script>
+    'use strict';
+    const idPattern = /^AKfy[A-Za-z0-9_-]{20,}$/;
+    function deploymentId(value) {
+      if (idPattern.test(value)) return value;
+      try {
+        const u = new URL(value);
+        if (u.protocol !== 'https:' || u.hostname !== 'script.google.com' || u.username || u.password || u.port) return '';
+        const m = u.pathname.match(/^\/macros\/(?:u\/\d+\/)?s\/([^/]+)\/exec\/?$/);
+        return m && idPattern.test(m[1]) ? m[1] : '';
+      } catch (_) { return ''; }
+    }
+    const $ = id => document.getElementById(id);
+    function openApp(id) {
+      const url = 'https://script.google.com/macros/s/' + id + '/exec';
+      $('setup').hidden = true;
+      $('direct').href = $('fallback').href = url;
+      $('fallbackUrl').textContent = url;
+      $('direct').hidden = $('help').hidden = false;
+      if ('credentialless' in HTMLIFrameElement.prototype) {
+        $('remember').hidden = $('appFrame').hidden = false;
+        $('appFrame').credentialless = true;
+        $('appFrame').src = url;
+      } else {
+        $('unsupported').hidden = false;
+      }
+    }
+    $('openForm').addEventListener('submit', e => {
+      e.preventDefault();
+      const id = deploymentId($('appUrl').value.trim());
+      if (!id) { $('error').textContent = 'script.google.com의 공개 웹앱 주소(/exec)를 입력하세요.'; return; }
+      const next = new URL(location.href); next.search = ''; next.hash = ''; next.searchParams.set('app', id); location.assign(next.href);
+    });
+    $('copy').addEventListener('click', async () => {
+      try { await navigator.clipboard.writeText(location.href); $('copyStatus').textContent = '접속 주소를 복사했습니다.'; }
+      catch (_) { $('copyStatus').textContent = '브라우저 주소창의 주소를 복사해 주세요.'; }
+    });
+    const requested = new URLSearchParams(location.search).get('app');
+    if (requested) {
+      const id = deploymentId(requested);
+      if (id) openApp(id); else $('error').textContent = '올바르지 않은 웹앱 주소입니다. 담당자에게 주소를 다시 받아 주세요.';
+    }
+  </script>
+</body>
+</html>
